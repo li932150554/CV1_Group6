@@ -142,7 +142,7 @@ def template_distance(v1, v2):
      
     """ the sum of squared differences(SSD) """
 
-    #distance = linalg.norm(v1 - v2)**2
+    distance = linalg.norm(v1 - v2)**2
 
     return distance
 
