@@ -18,7 +18,7 @@ class Problem2:
         distance = np.zeros((N, M))
         for i in range(N):
             for j in range(M):
-                distance[i,j] = (linalg.norm(features2[:,i] - features1[:,j]))**2
+                distance[i, j] = (linalg.norm(features2[:, i] - features1[:, j]))**2
         
         return distance
 
@@ -101,7 +101,7 @@ class Problem2:
             ps: (l, 3) numpy array containing normalized points in homogeneous coordinates.
             T: (3, 3) numpy array, transformation matrix for conditioning
         """
-        a = np.ones(3)
+        a = np.ones(4)
         tx, ty = np.mean(points, axis=0)
         sx, sy = np.max(abs(points), axis=0)
         T = np.array([[1/sx, 0, -tx/sx], [0, 1/sy, -ty/sy], [0, 0, 1]])
@@ -133,8 +133,9 @@ class Problem2:
         """ construct A """
         l = np.shape(p1)[0]
         A = np.zeros((2*l, 9))
+
         for i in range(l):
-            A[2 * i, :] = [0, 0, 0, p1[i, 0], p1[i, 1], 1, -p1[i, 0] * p2[i, i],
+            A[2 * i, :] = [0, 0, 0, p1[i, 0], p1[i, 1], 1, -p1[i, 0] * p2[i, 1],
                            -p1[i, 1] * p2[i, 1], -p2[i, 1]]
             A[2 * i + 1, :] = [-p1[i, 0], -p1[i, 1], -1, 0, 0, 0, p1[i, 0] * p2[i, 0],
                                p1[i, 1] * p2[i, 0], p2[i, 0]]
@@ -183,8 +184,8 @@ class Problem2:
         """
         l = np.shape(p1)[0]
         dist = np.zeros((l, 1))
-        p1_trans = Problem2.transform_pts(p1, H)
-        p2_trans = Problem2.transform_pts(p2, linalg.inv(H))
+        p1_trans = self.transform_pts(p1, H)
+        p2_trans = self.transform_pts(p2, linalg.inv(H))
         for i in range(l):
             dist[i] = linalg.norm(p1_trans[i, :] - p2[i, :])**2 + linalg.norm(p1[i, :] - p2_trans[i, :])
 
@@ -208,15 +209,17 @@ class Problem2:
             inliers: (N, 4)
         """
         l = np.shape(pairs)[0]
-        N = 0
-        inliers = np.array()
+        n = 0
+        # inliers = np.array([])
+        inliers = []
         for i in range(l):
             if dist[i] < threshold:
-                N = N + 1
-                inliers = np.array([[inliers], pairs[i, :]])
+                n = n + 1
+                # inliers = np.array([[inliers], pairs[i, :]])
+                inliers.append(pairs[i, :])
 
-        inliers = np.reshape(inliers, [N, 4])
-        return N, inliers
+        inliers = np.array(inliers).reshape((n, 4))
+        return n, inliers
     #
     # You code here
     #
@@ -237,10 +240,6 @@ class Problem2:
         n_iters = int(np.ceil(n_iters))  # round up and change to int type
 
         return n_iters
-    #
-    # You code here
-    #
-
 
 
     def ransac(self, pairs, n_iters, k, threshold):
@@ -265,16 +264,13 @@ class Problem2:
         # A = np.zeros((8, 9))
         for i in range(n_iters):
 
-            sample1, sample2 = Problem2.pick_samples(p1, p2, k)
-            x1_homo, T1 = Problem2.condition_points(sample1)
-            x2_homo, T2 = Problem2.condition_points(sample2)
-            H, HC = Problem2.compute_homography(x1_homo, x2_homo, T1, T2)
+            sample1, sample2 = self.pick_samples(p1, p2, k)
+            x1_homo, T1 = self.condition_points(sample1)
+            x2_homo, T2 = self.condition_points(sample2)
+            H, HC = self.compute_homography(x1_homo, x2_homo, T1, T2)
             H_sum.append(H)
-            dist = Problem2.compute_homography_distance(H, p1, p2)  # calculate all distances
-            n, inliers = Problem2.find_inliers(pairs, dist, threshold)  # find inliers
-            # sample1_trans = Problem2.transform_pts(sample1, H)
-            # dist = Problem2.compute_homography_distance(H, sample1_trans, sample2)
-            # N, inliers = Problem2.find_inliers(pairs, dist, threshold)
+            dist = self.compute_homography_distance(H, p1, p2)  # calculate all distances
+            n, inliers = self.find_inliers(pairs, dist, threshold)  # find inliers
             num_inliers[i] = n
             inliers_sum.append(inliers)
 
@@ -285,21 +281,6 @@ class Problem2:
         inliers_max = inliers_sum[index_max]
 
         return H_max_inliers, max_inliers, inliers_max
-
-        # """ construct A """
-        # for i in range(k):
-        #     A[2 * i, :] = [0, 0, 0, x1_homo[i, 0], x1_homo[i, 1], 1, -x1_homo[i, 0] * x2_homo[i, i],
-        #                    -x1_homo[i, 1] * x2_homo[i, 1], -x2_homo[i, 1]]
-        #     A[2 * i + 1, :] = [-x1_homo[i, 0], -x1_homo[i, 1], -1, 0, 0, 0, x1_homo[i, 0] * x2_homo[i, 0],
-        #                        x1_homo[i, 1] * x2_homo[i, 0], x2_homo[i, 0]]
-        #
-        # """ compute Homography H through SVD """
-        # U, S, V_T = linalg.svd(A)
-        # h = V_T.T[:, 8]  # the last right singular vector
-        # H_con = h.reshape((3, 3))
-        # H_uncon = np.dot(np.dot(linalg.inv(T2), H_con), T1)  # H = inv(T')*H_*T
-        # H_con = H_con / H_con[-1, -1]  # normalize
-        # H_uncon = H_uncon / H_uncon[-1, -1]  # normalize
 
 
     def recompute_homography(self, inliers):
@@ -316,7 +297,7 @@ class Problem2:
         p2 = inliers[:, 2:4]
         A = np.zeros((2 * n, 9))
         for i in range(n):
-            A[2 * i, :] = [0, 0, 0, p1[i, 0], p1[i, 1], 1, -p1[i, 0] * p2[i, i],
+            A[2 * i, :] = [0, 0, 0, p1[i, 0], p1[i, 1], 1, -p1[i, 0] * p2[i, 1],
                            -p1[i, 1] * p2[i, 1], -p2[i, 1]]
             A[2 * i + 1, :] = [-p1[i, 0], -p1[i, 1], -1, 0, 0, 0, p1[i, 0] * p2[i, 0],
                                p1[i, 1] * p2[i, 0], p2[i, 0]]
