@@ -137,12 +137,11 @@ def template_distance(v1, v2):
     '''
     
     """ Dot-Product """
-    #distance = v2.T*v1 / (linalg.norm(v1)*linalg.norm(v2))
-    distance = np.dot(v1, v2) / (linalg.norm(v1)*linalg.norm(v2))
+    #distance = np.dot(v1, v2) / (linalg.norm(v1)*linalg.norm(v2))
      
     """ the sum of squared differences(SSD) """
 
-    #distance = linalg.norm(v1 - v2)**2
+    distance = linalg.norm(v1 - v2)**2
 
     return distance
 
