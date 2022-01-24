@@ -59,7 +59,7 @@ def compute_fundamental(p1, p2):
     A = np.zeros((dim, 9))
     for i in range(dim):
         A[i, :] = [ps_1[i, 0]*ps_2[i, 0], ps_1[i, 1]*ps_2[i, 0], ps_2[i, 0], ps_1[i, 0]*ps_2[i, 1],
-                   ps_1[i, 1]*ps_2[i, 1], ps_2[i, 1], ps_1[i, 0], ps_1[i, 0], 1]
+                   ps_1[i, 1]*ps_2[i, 1], ps_2[i, 1], ps_1[i, 0], ps_1[i, 1], 1]
 
     U, D, V_T = np.linalg.svd(A)
     F = np.array(V_T.T[:, 8]).reshape(3, 3)
@@ -105,10 +105,30 @@ def draw_epipolars(F, p1, img):
         X1, X2, Y1, Y2: (n, ) numpy arrays containing the coordinates of the n epipolar lines
             at the image borders
     """
-    n = np.shape(p1)[0]
-    a = np.ones((n, 1))
-    p1_hom = np.insert(p1, 2, values=a, axis=1)
-    l = np.dot(F, p1_hom.T).T
+    # n = np.shape(p1)[0]
+    # a = np.ones((n, 1))
+    # p1_hom = np.insert(p1, 2, values=a, axis=1)
+    # l = np.dot(F, p1_hom.T).T
+
+    W = np.shape(img)[1]
+    nb_line = np.shape(p1)[0]
+    X1 = np.zeros(nb_line)
+    Y1 = np.empty(nb_line)
+    X2 = np.full((nb_line), W)
+    Y2 = np.empty(nb_line)
+
+    for i in range(nb_line):
+        one_point = np.concatenate([p1[i], [1]], axis=0)  # create homogeneous coordinates
+        l_1 = np.dot(F,
+                     one_point)  # we get a vector that define the line, so we have to find c in the line equation : ax+by+c = 0 because the vector value are (-b, a)
+        a = l_1[0]
+        b = l_1[1]
+        c = l_1[2]
+
+        Y1[i] = (-c) / b
+        Y2[i] = -(c + (a * W)) / b
+
+    return X1, X2, Y1, Y2
 
     #
     # You code here
@@ -156,8 +176,14 @@ def compute_epipoles(F):
     #            https: // math.stackexchange.com / questions / 1771013 / how - is -the - null - space - related - to - singular - value - decomposition
 
     U,S,V_T = np.linalg.svd(F)
-    e2 = V_T.T[:, -1]
-    e1 = U[:, -1]
-    return e1, e2
+    e2_h = V_T.T[:, -1]
+    e2_c = (e2_h / e2_h[-1])[0:2]
+    e1_h = U[:, -1]
+    e1_c = (e1_h / e1_h[-1])[0:2]
+    return e1_c, e2_c
+
+    # e2 = V_T.T[:, -1]
+    # e1 = U[:, -1]
+    # return e1, e2
 
 

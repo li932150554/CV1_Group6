@@ -117,18 +117,27 @@ def compute_disparity(padded_img_l, padded_img_r, max_disp, window_size, alpha):
     #
     # Your code goes here
     #
-    H, W = np.shape(padded_img_l)
-    disparity = np.zeros((H-window_size+1, W-window_size+1))
+    H_p, W_p = np.shape(padded_img_l)
+    H = H_p - window_size + 1
+    W = W_p - window_size + 1
+    disparity = np.zeros((H, W))
 
-    for i in range(H-window_size+1):
-        for j in range(W-window_size+1):
+    for i in range(H):
+        for j in range(W):
             cost_val = []
-            for k in range(max_disp):
-                val = cost_function(padded_img_l[i:i+window_size, j:j+window_size],
-                                    padded_img_r[i+1+k:i+1+k+window_size, j:j+window_size], alpha)
-                cost_val.append(val)
+            if (W - j) < max_disp:
+                for k in range(W - j):
+                    val = cost_function(padded_img_l[i:i+window_size, j:j+window_size],
+                                        padded_img_r[i:i+window_size, j+k:j+k+window_size], alpha)
+                    cost_val.append(val)
+            else:
+                for k in range(max_disp):
+                    val = cost_function(padded_img_l[i:i + window_size, j:j + window_size],
+                                        padded_img_r[i:i + window_size, j + k:j + k + window_size], alpha)
+                    cost_val.append(val)
+
             index_min = np.argmin(cost_val)
-            disparity[i, j] = index_min + 1
+            disparity[i, j] = index_min
 
     assert disparity.ndim == 2
     return disparity
